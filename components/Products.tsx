@@ -191,3 +191,60 @@ export default function Products() {
                   onChange={(e) => setEditingProduct({ ...editingProduct, barcode: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Precio Compra ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingProduct.purchase_price ?? ""}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, purchase_price: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Precio Venta ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingProduct.sale_price ?? ""}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, sale_price: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500">Stock actual</label>
+                <input
+                  type="number"
+                  value={editingProduct.stock ?? 0}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
