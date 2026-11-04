@@ -34,7 +34,7 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
     setMsg(null);
     
     // Si vende por blíster verificamos si tiene unidades por caja definidas (asumimos por defecto 10 si no tiene)
-    const unitsPerPackage = product.units_per_package || 10; 
+    const unitsPerPackage = (product as any).units_per_package || 10; 
     
     // Calcular precio unitario según corresponda
     let unitPrice = product.sale_price;
