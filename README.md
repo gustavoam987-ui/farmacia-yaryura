@@ -31,3 +31,29 @@ create policy "acceso autenticado" on products
 ## Publicar
 
 Subí el repo a GitHub e importalo en Vercel, cargando las dos variables de entorno.
+
+## Paneles
+
+- **Panel**: indicadores (inventario a costo y a venta, productos, stock bajo, sin stock) y alertas.
+- **Finanzas**: inversión, ingreso y ganancia proyectados (suponen vender todo el stock actual a los precios actuales) y margen global.
+- **Destacados**: rotación de los últimos 30 días (requiere la tabla `stock_movements`) y ranking por ganancia potencial y capital en stock.
+- **Reposición**: productos con stock menor o igual al mínimo.
+
+## Tabla opcional para medir rotación
+
+Reemplazá `bigint` por el tipo real del `id` de tu tabla `products` (por ejemplo `uuid`).
+
+```sql
+create table stock_movements (
+  id bigint generated always as identity primary key,
+  product_id bigint not null references products(id) on delete cascade,
+  type text not null check (type in ('in', 'out', 'adjust')),
+  quantity integer not null,
+  created_at timestamptz not null default now()
+);
+alter table stock_movements enable row level security;
+create policy "acceso autenticado" on stock_movements
+  for all to authenticated using (true) with check (true);
+```
+
+Cada venta o salida de mercadería debe guardarse como una fila con `type = 'out'`. La app todavía no tiene una pantalla para registrarlas.
