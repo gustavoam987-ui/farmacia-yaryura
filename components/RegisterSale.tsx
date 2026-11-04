@@ -8,7 +8,7 @@ import { ShoppingCart, Search, CheckCircle, AlertCircle, Minus, Plus, Trash2 } f
 type CartItem = {
   product: Product;
   quantity: number;
-  isBlister: boolean; // true si vende por blíster/fracción, false si es caja entera
+  isBlister: boolean;
   unitPrice: number;
 };
 
@@ -21,7 +21,6 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // Filtrar productos para el buscador rápido
   const filtered = search.trim() === "" 
     ? [] 
     : products.filter(p => 
@@ -33,10 +32,8 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
     setErr(null);
     setMsg(null);
     
-    // Si vende por blíster verificamos si tiene unidades por caja definidas (asumimos por defecto 10 si no tiene)
     const unitsPerPackage = (product as any).units_per_package || 10; 
     
-    // Calcular precio unitario según corresponda
     let unitPrice = product.sale_price;
     if (isBlister) {
       unitPrice = product.sale_price / unitsPerPackage;
@@ -81,12 +78,9 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
     setMsg(null);
 
     try {
-      // 1. Descontar stock en la base de datos para cada producto del carrito
       for (const item of cart) {
         const unitsPerPkg = (item.product as any).units_per_package || 10;
         
-        // Calcular cuántas unidades absolutas se restan al stock general
-        // Si es caja: quantity * 1 (o si tu stock representa cajas enteras). Si es blíster: quantity / unitsPerPkg.
         const stockReduction = item.isBlister 
           ? item.quantity / unitsPerPkg 
           : item.quantity;
@@ -94,7 +88,6 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
         const currentStock = item.product.stock ?? 0;
         const newStock = Math.max(0, currentStock - stockReduction);
 
-        // Actualizar en Supabase
         const { error: updateError } = await supabase
           .from("products")
           .update({ stock: Number(newStock.toFixed(2)) })
@@ -102,7 +95,6 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
 
         if (updateError) throw new Error(updateError.message);
 
-        // Opcional: Registrar movimiento si existe la tabla stock_movements
         try {
           await supabase.from("stock_movements").insert({
             product_id: item.product.id,
@@ -110,12 +102,13 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
             reason: item.isBlister ? `Venta blíster (${item.quantity} un.)` : `Venta caja (${item.quantity} un.)`
           });
         } catch {
-          // Si la tabla no existe o falla, ignoramos para que la venta no se detenga
+          // Ignorar si la tabla no existe
         }
+      }
 
       setMsg("¡Venta registrada con éxito y stock actualizado!");
       setCart([]);
-      onSaleCompleted(); // Recarga los productos en la app principal
+      onSaleCompleted();
     } catch (e: any) {
       setErr(e.message || "Error al procesar la venta.");
     } finally {
@@ -125,7 +118,6 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      {/* Columna Izquierda / Centro: Buscador y Resultados */}
       <div className="space-y-4 lg:col-span-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
@@ -143,7 +135,6 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
             />
           </div>
 
-          {/* Lista desplegable de resultados de búsqueda */}
           {filtered.length > 0 && (
             <div className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-md max-h-80 overflow-y-auto">
               {filtered.map(p => (
@@ -175,7 +166,6 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
         </div>
       </div>
 
-      {/* Columna Derecha: Carrito / Ticket de Mostrador */}
       <div className="space-y-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between min-h-[400px]">
           <div>
