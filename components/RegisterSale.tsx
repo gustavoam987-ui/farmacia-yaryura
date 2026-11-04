@@ -83,7 +83,7 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
     try {
       // 1. Descontar stock en la base de datos para cada producto del carrito
       for (const item of cart) {
-        const unitsPerPkg = item.product.units_per_package || 10;
+        const unitsPerPkg = (item.product as any).units_per_package || 10;
         
         // Calcular cuántas unidades absolutas se restan al stock general
         // Si es caja: quantity * 1 (o si tu stock representa cajas enteras). Si es blíster: quantity / unitsPerPkg.
