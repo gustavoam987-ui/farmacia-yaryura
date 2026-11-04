@@ -9,6 +9,10 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase.
 3. En Supabase, creá un usuario en Authentication > Users (correo y contraseña).
 4. `npm run dev` y abrí http://localhost:3000
 
+## Importar planilla
+
+En la pestaña «Importar planilla» subís el Excel o CSV del proveedor, asignás las columnas (código, nombre, precio de compra), elegís el margen, revisás la comparación y confirmás. Coincide primero por código de barras; si no hay código, por nombre y lo marca «Revisar». Nunca modifica el stock.
+
 ## Tabla `products`
 
 `lib/types.ts` supone estas columnas: `id`, `barcode`, `name`, `cost_price`, `sale_price`, `stock`, `min_stock`.
