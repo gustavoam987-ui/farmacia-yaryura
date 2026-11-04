@@ -3,19 +3,30 @@
 import { useState } from "react";
 import { Pill } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-
+import WelcomeModal from "./WelcomeModal";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError("Correo o contraseña incorrectos.");
+  const [showWelcome, setShowWelcome] = useState(false);
+async function submit(e: React.FormEvent) {
+  e.preventDefault();
+  setBusy(true);
+  setError(null);
+  
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  if (error) {
+    setError("Correo o contraseña incorrectos.");
+    setBusy(false); // Solo desactivamos el busy si hay error
+  } else {
+    // ¡Login exitoso! Mostramos la animación de bienvenida
+    setShowWelcome(true);
+    // No ponemos setBusy(false) aquí para que el botón se mantenga bloqueado mientras se muestra el cartel
+  }
+}
+  
     setBusy(false);
   }
 
@@ -44,6 +55,14 @@ export default function Login() {
           {busy ? "Ingresando…" : "Ingresar"}
         </button>
       </form>
+      {/* Aquí colocamos el componente de bienvenida */}
+      {showWelcome && (
+        <WelcomeModal 
+          onFinish={() => {
+            window.location.reload();
+          }} 
+        />
+      )}
     </main>
   );
 }
