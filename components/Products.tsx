@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Pencil, Trash2, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Product } from "@/lib/types";
 
@@ -25,10 +25,10 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  // Cálculos para las tarjetas superiores usando purchase_price de forma segura
+  // Cálculos corregidos usando min_stock
   const totalProducts = products.length;
   const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
-  const lowStockCount = products.filter((p) => (p.stock || 0) <= (p.minimum_stock || 5)).length;
+  const lowStockCount = products.filter((p) => (p.stock || 0) <= ((p as any).min_stock || 5)).length;
   const inventoryCost = products.reduce((acc, p) => acc + ((p.purchase_price || 0) * (p.stock || 0)), 0);
 
   const filteredProducts = products.filter((p) =>
@@ -62,7 +62,7 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Buscador y Botón de Agregar */}
+      {/* Buscador */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
@@ -105,7 +105,7 @@ export default function Products() {
                   <td className="px-4 py-3 text-slate-500">{p.barcode || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{p.purchase_price != null ? ars.format(p.purchase_price) : "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{p.sale_price != null ? ars.format(p.sale_price) : "—"}</td>
-                  <td className={`px-4 py-3 font-semibold ${(p.stock || 0) <= (p.minimum_stock || 5) ? "text-amber-600" : "text-slate-800"}`}>
+                  <td className={`px-4 py-3 font-semibold ${(p.stock || 0) <= ((p as any).min_stock || 5) ? "text-amber-600" : "text-slate-800"}`}>
                     {p.stock ?? 0}
                   </td>
                   <td className="px-4 py-3 text-right">
