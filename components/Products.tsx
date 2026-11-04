@@ -59,7 +59,6 @@ export default function Products() {
     }
   }
 
-  // Cálculos de resumen
   const totalProducts = products.length;
   const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
   const lowStockCount = products.filter((p) => (p.stock || 0) <= ((p as any).min_stock || 5)).length;
@@ -76,7 +75,6 @@ export default function Products() {
         <h2 className="text-xl font-bold tracking-tight text-slate-800">Alta, edición y búsqueda</h2>
       </div>
 
-      {/* Tarjetas de Resumen */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Productos</p>
@@ -96,7 +94,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Buscador */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
@@ -110,7 +107,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Tabla de Productos */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-500">
@@ -167,7 +163,6 @@ export default function Products() {
         </table>
       </div>
 
-      {/* Modal de Edición */}
       {editingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
@@ -196,23 +191,3 @@ export default function Products() {
                   onChange={(e) => setEditingProduct({ ...editingProduct, barcode: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500">Precio Compra ($)</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editingProduct.purchase_price ?? ""}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, purchase_price: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500">Precio Venta ($)</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editingProduct.sale_price ?? ""}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, sale_price:
