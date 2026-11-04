@@ -88,7 +88,8 @@ export default function ImportPrices({ onDone }: { onDone: () => void }) {
         if (q && (!q.barcode || !barcode)) { p = q; review = true; }
       }
       if (!p) return name ? { status: "new", barcode, name, cost, sale, apply: true } : { status: "skip", barcode, name, cost, sale, apply: false };
-      const changed = Math.abs(p.cost_price - cost) > 0.004;
+      const existingCost = p.cost_price ?? (p as any).purchase_price ?? (p as any).cost ?? 0;
+      const changed = Math.abs(existingCost - cost) > 0.004;
       return { status: review ? "review" : changed ? "changed" : "same", barcode, name, cost, product: p, sale, apply: changed && !review };
     });
     setRows(out);
@@ -99,9 +100,9 @@ export default function ImportPrices({ onDone }: { onDone: () => void }) {
     if (!rows) return;
     const sel = rows.filter((r) => r.apply && (r.status === "new" || r.status === "changed" || r.status === "review"));
     if (!sel.length) return setErr("No hay cambios marcados.");
-    if (!confirm(`Se aplicarán ${sel.length} cambios. El stock no se modifica. ¿Confirmar?`)) return;
+    if (!confirm(`Se aplicarán ${sel.length} cambios. ¿Confirmar?`)) return;
     setBusy(true); setErr(null);
-    const news = sel.filter((r) => r.status === "new").map((r) => ({ barcode: r.barcode || null, name: r.name, cost_price: r.cost, sale_price: r.sale, stock: 0, min_stock: 5 }));
+    const news = sel.filter((r) => r.status === "new").map((r) => ({ barcode: r.barcode || null, name: r.name, purchase_price: r.cost, sale_price: r.sale }));
     for (let i = 0; i < news.length; i += 500) {
       const { error } = await supabase.from("products").insert(news.slice(i, i + 500));
       if (error) { setErr(error.message); setBusy(false); return; }
@@ -109,7 +110,7 @@ export default function ImportPrices({ onDone }: { onDone: () => void }) {
     const ups = sel.filter((r) => r.product);
     for (let i = 0; i < ups.length; i += 20) {
       const res = await Promise.all(ups.slice(i, i + 20).map((r) => {
-        const patch: Record<string, unknown> = { cost_price: r.cost };
+        const patch: Record<string, unknown> = { purchase_price: r.cost };
         if (reprice) patch.sale_price = r.sale;
         if (!r.product!.barcode && r.barcode) patch.barcode = r.barcode;
         return supabase.from("products").update(patch).eq("id", r.product!.id);
@@ -138,7 +139,7 @@ export default function ImportPrices({ onDone }: { onDone: () => void }) {
     <section className="space-y-5">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="flex items-center gap-2 text-lg font-semibold"><FileSpreadsheet size={20} /> Importar planilla de precios</h2>
-        <p className="mt-1 text-sm text-slate-500">Subí el Excel (.xlsx) o CSV de tu proveedor. No se cambia nada hasta que revises y confirmes. El stock nunca se modifica.</p>
+        <p className="mt-1 text-sm text-slate-500">Subí el Excel (.xlsx) o CSV de tu proveedor. No se cambia nada hasta que revises y confirmes.</p>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={onFile} className="mt-4 block text-sm" />
         {fileName && <p className="mt-2 text-sm text-slate-500">{fileName}: {data.length} filas leídas.</p>}
       </div>
@@ -189,7 +190,6 @@ export default function ImportPrices({ onDone }: { onDone: () => void }) {
               const v = e.target.checked; setReprice(v);
             }} /> Recalcular también el precio de venta de los productos existentes
           </label>
-          <p className="text-sm text-slate-500">Las filas «Revisar» coinciden solo por nombre y quedan sin marcar.</p>
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-slate-500"><tr className="border-b border-slate-200">
@@ -197,7 +197,7 @@ export default function ImportPrices({ onDone }: { onDone: () => void }) {
               </tr></thead>
               <tbody>
                 {rows.map((r, i) => ({ r, i })).filter((x) => x.r.status !== "same").slice(0, 300).map(({ r, i }) => {
-                  const old = r.product?.cost_price;
+                  const old = r.product?.cost_price ?? (r.product as any)?.purchase_price ?? (r.product as any)?.cost;
                   const v = old ? ((r.cost - old) / old) * 100 : null;
                   return (
                     <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
