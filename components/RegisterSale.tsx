@@ -103,14 +103,15 @@ export default function RegisterSale({ products, onSaleCompleted }: { products: 
         if (updateError) throw new Error(updateError.message);
 
         // Opcional: Registrar movimiento si existe la tabla stock_movements
-        await supabase.from("stock_movements").insert({
-          product_id: item.product.id,
-          change: -stockReduction,
-          reason: item.isBlister ? `Venta blíster (${item.quantity} un.)` : `Venta caja (${item.quantity} un.)`
-        }).catch(() => {
-          // Si la tabla stock_movements no existe aún, ignoramos el error para que la venta no falle
-        });
-      }
+        try {
+          await supabase.from("stock_movements").insert({
+            product_id: item.product.id,
+            change: -stockReduction,
+            reason: item.isBlister ? `Venta blíster (${item.quantity} un.)` : `Venta caja (${item.quantity} un.)`
+          });
+        } catch {
+          // Si la tabla no existe o falla, ignoramos para que la venta no se detenga
+        }
 
       setMsg("¡Venta registrada con éxito y stock actualizado!");
       setCart([]);
