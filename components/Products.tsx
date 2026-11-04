@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pencil, Trash2, Search } from "lucide-react";
+import { Pencil, Trash2, Search, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Product } from "@/lib/types";
 
@@ -11,6 +11,7 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
   async function fetchProducts() {
     setLoading(true);
@@ -25,7 +26,40 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  // Cálculos seguros con tipado flexible para evitar errores de compilación
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`¿Estás seguro de eliminar el producto "${name}"?`)) return;
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) {
+      alert("Error al eliminar: " + error.message);
+    } else {
+      setProducts(products.filter((p) => p.id !== id));
+    }
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: editingProduct.name,
+        barcode: editingProduct.barcode,
+        purchase_price: Number(editingProduct.purchase_price),
+        sale_price: Number(editingProduct.sale_price),
+        stock: Number(editingProduct.stock),
+      })
+      .eq("id", editingProduct.id);
+
+    if (error) {
+      alert("Error al actualizar: " + error.message);
+    } else {
+      setEditingProduct(null);
+      fetchProducts();
+    }
+  }
+
+  // Cálculos de resumen
   const totalProducts = products.length;
   const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
   const lowStockCount = products.filter((p) => (p.stock || 0) <= ((p as any).min_stock || 5)).length;
@@ -110,10 +144,18 @@ export default function Products() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Editar">
+                      <button
+                        onClick={() => setEditingProduct({ ...p })}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        title="Editar"
+                      >
                         <Pencil size={16} />
                       </button>
-                      <button className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Eliminar">
+                      <button
+                        onClick={() => handleDelete(p.id, p.name)}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        title="Eliminar"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -124,6 +166,90 @@ export default function Products() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal de Edición */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Editar Producto</h3>
+              <button onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdate} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500">Nombre</label>
+                <input
+                  type="text"
+                  value={editingProduct.name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500">Código de barras</label>
+                <input
+                  type="text"
+                  value={editingProduct.barcode || ""}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, barcode: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Precio Compra ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingProduct.purchase_price ?? ""}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, purchase_price: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Precio Venta ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editingProduct.sale_price ?? ""}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, sale_price: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500">Stock actual</label>
+                <input
+                  type="number"
+                  value={editingProduct.stock ?? 0}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
