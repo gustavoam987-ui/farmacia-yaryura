@@ -1,168 +1,129 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import type { Product, ProductInput } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
 const ars = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
-const empty: ProductInput = { barcode: "", name: "", cost_price: 0, sale_price: 0, stock: 0, min_stock: 5 };
 
 export default function Products() {
-  const [items, setItems] = useState<Product[]>([]);
-  const [q, setQ] = useState("");
-  const [form, setForm] = useState<ProductInput | null>(null);
-  const [editId, setEditId] = useState<Product["id"] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  async function fetchProducts() {
     setLoading(true);
-    const { data, error } = await supabase.from("products").select("*").order("name").limit(2000);
-    if (error) setError(error.message);
-    else {
-      setItems(data as Product[]);
-      setError(null);
+    const { data, error } = await supabase.from("products").select("*").order("name");
+    if (!error && data) {
+      setProducts(data as Product[]);
     }
     setLoading(false);
-  }, []);
+  }
 
   useEffect(() => {
-    load();
-  }, [load]);
+    fetchProducts();
+  }, []);
 
-  const shown = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return t ? items.filter((p) => p.name.toLowerCase().includes(t) || (p.barcode ?? "").includes(t)) : items;
-  }, [items, q]);
+  // Cálculos para las tarjetas superiores usando purchase_price de forma segura
+  const totalProducts = products.length;
+  const totalUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
+  const lowStockCount = products.filter((p) => (p.stock || 0) <= (p.minimum_stock || 5)).length;
+  const inventoryCost = products.reduce((acc, p) => acc + ((p.purchase_price || 0) * (p.stock || 0)), 0);
 
-  const stats = useMemo(() => ({
-    total: items.length,
-    units: items.reduce((a, p) => a + p.stock, 0),
-    low: items.filter((p) => p.stock <= p.min_stock).length,
-    value: items.reduce((a, p) => a + p.stock * p.cost_price, 0),
-  }), [items]);
-
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form) return;
-    const payload = { ...form, barcode: form.barcode?.trim() || null };
-    const { error } =
-      editId === null
-        ? await supabase.from("products").insert(payload)
-        : await supabase.from("products").update(payload).eq("id", editId);
-    if (error) return setError(error.message);
-    setForm(null);
-    setEditId(null);
-    load();
-  }
-
-  async function remove(p: Product) {
-    if (!confirm(`¿Eliminar "${p.name}"?`)) return;
-    const { error } = await supabase.from("products").delete().eq("id", p.id);
-    if (error) setError(error.message);
-    else load();
-  }
-
-  const num = (k: keyof ProductInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => (f ? { ...f, [k]: Number(e.target.value) } : f));
-  const field = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-brand";
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
-    <section>
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          ["Productos", stats.total],
-          ["Unidades", stats.units],
-          ["Stock bajo", stats.low],
-          ["Inventario a costo", ars.format(stats.value)],
-        ].map(([label, value]) => (
-          <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">{label}</p>
-            <p className="mt-1 text-2xl font-semibold">{value}</p>
-          </div>
-        ))}
+    <section className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold tracking-tight text-slate-800">Alta, edición y búsqueda</h2>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
-          <Search size={16} className="absolute left-3 top-3 text-slate-400" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o código de barras"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 outline-none focus:border-brand" />
+      {/* Tarjetas de Resumen */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Productos</p>
+          <p className="mt-1 text-2xl font-bold text-slate-800">{totalProducts}</p>
         </div>
-        <button onClick={() => { setEditId(null); setForm({ ...empty }); }}
-          className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark">
-          <Plus size={18} /> Agregar producto
-        </button>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Unidades</p>
+          <p className="mt-1 text-2xl font-bold text-slate-800">{totalUnits}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Stock bajo</p>
+          <p className="mt-1 text-2xl font-bold text-slate-800">{lowStockCount}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Inventario a costo</p>
+          <p className="mt-1 text-2xl font-bold text-slate-800">{ars.format(inventoryCost)}</p>
+        </div>
       </div>
 
-      {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {/* Buscador y Botón de Agregar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o código de barras..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-brand"
+          />
+        </div>
+      </div>
 
+      {/* Tabla de Productos */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="text-slate-500">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead className="bg-slate-50 text-slate-500">
             <tr className="border-b border-slate-200">
-              {["Producto", "Código", "Compra", "Venta", "Stock", ""].map((h) => (
-                <th key={h} className="px-4 py-3 font-medium">{h}</th>
-              ))}
+              <th className="px-4 py-3 font-medium">Producto</th>
+              <th className="px-4 py-3 font-medium">Código</th>
+              <th className="px-4 py-3 font-medium">Compra</th>
+              <th className="px-4 py-3 font-medium">Venta</th>
+              <th className="px-4 py-3 font-medium">Stock</th>
+              <th className="px-4 py-3 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {shown.map((p) => (
-              <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium">{p.name}</td>
-                <td className="px-4 py-3 text-slate-500">{p.barcode}</td>
-                <td className="px-4 py-3">{ars.format(p.cost_price)}</td>
-                <td className="px-4 py-3">{ars.format(p.sale_price)}</td>
-                <td className={`px-4 py-3 font-semibold ${p.stock === 0 ? "text-red-600" : p.stock <= p.min_stock ? "text-amber-600" : ""}`}>{p.stock}</td>
-                <td className="px-4 py-3 text-right">
-                  <button aria-label="Editar" onClick={() => { setEditId(p.id); setForm({ barcode: p.barcode, name: p.name, cost_price: p.cost_price, sale_price: p.sale_price, stock: p.stock, min_stock: p.min_stock }); }}
-                    className="rounded-md p-2 hover:bg-slate-100"><Pencil size={16} /></button>
-                  <button aria-label="Eliminar" onClick={() => remove(p)} className="rounded-md p-2 text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>
-                </td>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">Cargando productos...</td>
               </tr>
-            ))}
-            {!shown.length && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">{loading ? "Cargando…" : "No hay productos para mostrar."}</td></tr>
+            ) : filteredProducts.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">No se encontraron productos.</td>
+              </tr>
+            ) : (
+              filteredProducts.map((p) => (
+                <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
+                  <td className="px-4 py-3 text-slate-500">{p.barcode || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.purchase_price != null ? ars.format(p.purchase_price) : "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">{p.sale_price != null ? ars.format(p.sale_price) : "—"}</td>
+                  <td className={`px-4 py-3 font-semibold ${(p.stock || 0) <= (p.minimum_stock || 5) ? "text-amber-600" : "text-slate-800"}`}>
+                    {p.stock ?? 0}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" title="Editar">
+                        <Pencil size={16} />
+                      </button>
+                      <button className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Eliminar">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
-
-      {form && (
-        <div className="fixed inset-0 z-10 grid place-items-center bg-black/40 p-4">
-          <form onSubmit={save} className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{editId === null ? "Nuevo producto" : "Editar producto"}</h2>
-              <button type="button" aria-label="Cerrar" onClick={() => setForm(null)}><X size={18} /></button>
-            </div>
-            <label className="block text-sm font-medium text-slate-600">Nombre
-              <input required className={field} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </label>
-            <label className="block text-sm font-medium text-slate-600">Código de barras
-              <input className={field} value={form.barcode ?? ""} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm font-medium text-slate-600">Precio de compra
-                <input type="number" min={0} step="any" className={field} value={form.cost_price} onChange={num("cost_price")} />
-              </label>
-              <label className="block text-sm font-medium text-slate-600">Precio de venta
-                <input type="number" min={0} step="any" className={field} value={form.sale_price} onChange={num("sale_price")} />
-              </label>
-              <label className="block text-sm font-medium text-slate-600">Stock
-                <input type="number" min={0} className={field} value={form.stock} onChange={num("stock")} />
-              </label>
-              <label className="block text-sm font-medium text-slate-600">Stock mínimo
-                <input type="number" min={0} className={field} value={form.min_stock} onChange={num("min_stock")} />
-              </label>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setForm(null)} className="rounded-lg border border-slate-200 px-4 py-2 font-medium hover:bg-slate-100">Cancelar</button>
-              <button className="rounded-lg bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark">Guardar</button>
-            </div>
-          </form>
-        </div>
-      )}
     </section>
   );
 }
