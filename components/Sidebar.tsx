@@ -1,9 +1,9 @@
 "use client";
 
-import { AlertTriangle, FileSpreadsheet, LayoutDashboard, LogOut, Package, Pill, Star, Wallet } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, LayoutDashboard, LogOut, Package, Pill, Star, Wallet, ShoppingCart } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-export type Tab = "dashboard" | "finance" | "top" | "alerts" | "products" | "import";
+export type Tab = "dashboard" | "finance" | "top" | "alerts" | "products" | "import" | "sale";
 
 export const NAV: { id: Tab; label: string; title: string; subtitle: string; icon: typeof Pill }[] = [
   { id: "dashboard", label: "Panel", title: "Panel general", subtitle: "Resumen del negocio en tiempo real", icon: LayoutDashboard },
@@ -12,6 +12,7 @@ export const NAV: { id: Tab; label: string; title: string; subtitle: string; ico
   { id: "alerts", label: "Reposición", title: "Reposición de stock", subtitle: "Productos en o por debajo del stock mínimo", icon: AlertTriangle },
   { id: "products", label: "Productos", title: "Productos", subtitle: "Alta, edición y búsqueda", icon: Package },
   { id: "import", label: "Importar", title: "Importar planilla", subtitle: "Actualizá precios desde Excel o CSV", icon: FileSpreadsheet },
+  { id: "sale", label: "Venta", title: "Registrar Venta", subtitle: "Cobros y mostrador", icon: ShoppingCart },
 ];
 
 export function Logo() {
