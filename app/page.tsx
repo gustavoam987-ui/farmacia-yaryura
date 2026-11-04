@@ -2,16 +2,25 @@
 
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { LogOut, Pill, Package, FileSpreadsheet } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useProducts } from "@/lib/useProducts";
+import { isCritical } from "@/lib/metrics";
 import Login from "@/components/Login";
+import Sidebar, { Logo, NAV, type Tab } from "@/components/Sidebar";
+import Dashboard from "@/components/Dashboard";
+import Finance from "@/components/Finance";
+import TopProducts from "@/components/TopProducts";
+import StockAlerts from "@/components/StockAlerts";
 import Products from "@/components/Products";
 import ImportPrices from "@/components/ImportPrices";
 
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
-  const [activeTab, setActiveTab] = useState<"products" | "import">("products");
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [version, setVersion] = useState(0);
+  const { products, loading, error, reload } = useProducts();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -22,64 +31,40 @@ export default function Home() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // Los datos de los paneles se actualizan al entrar a cada pestaña.
+  useEffect(() => {
+    if (session) reload();
+  }, [session, tab, version, reload]);
+
   if (!ready) return null;
   if (!session) return <Login />;
 
+  const current = NAV.find((n) => n.id === tab)!;
+  const needsData = tab !== "products" && tab !== "import";
+
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-8">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white">
-              <Pill size={20} />
-            </span>
-            <div className="leading-tight">
-              <p className="text-xs font-semibold tracking-wide text-slate-500">FARMACIA</p>
-              <p className="font-bold tracking-wide text-brand">YARYURA</p>
-            </div>
-          </div>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-100 sm:hidden"
-          >
-            <LogOut size={16} /> Salir
-          </button>
+    <div className="min-h-screen lg:pl-64">
+      <Sidebar tab={tab} onTab={setTab} email={session.user.email} criticalCount={products.filter(isCritical).length} />
+      <main className="mx-auto max-w-6xl p-4 pb-24 sm:p-8 lg:pb-8">
+        <div className="mb-4 flex items-center justify-between lg:hidden">
+          <Logo />
+          <button onClick={() => supabase.auth.signOut()} aria-label="Salir" className="rounded-lg border border-slate-200 bg-white p-2"><LogOut size={18} /></button>
         </div>
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">{current.title}</h1>
+          <p className="text-sm text-slate-500">{current.subtitle}</p>
+        </header>
 
-        {/* Pestañas de navegación */}
-        <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-xl self-start sm:self-auto">
-          <button
-            onClick={() => setActiveTab("products")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === "products"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Package size={16} /> Productos
-          </button>
-          <button
-            onClick={() => setActiveTab("import")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === "import"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <FileSpreadsheet size={16} /> Importar Planilla
-          </button>
-        </div>
+        {error && needsData && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {loading && needsData && !products.length && <p className="text-sm text-slate-500">Cargando datos…</p>}
 
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-100"
-        >
-          <LogOut size={16} /> Salir
-        </button>
-      </header>
-
-      {/* Renderizado de la pestaña activa */}
-      {activeTab === "products" ? <Products /> : <ImportPrices onDone={() => setActiveTab("products")} />}
+        {tab === "dashboard" && <Dashboard products={products} onNavigate={setTab} />}
+        {tab === "finance" && <Finance products={products} />}
+        {tab === "top" && <TopProducts products={products} />}
+        {tab === "alerts" && <StockAlerts products={products} />}
+        {tab === "products" && <Products />}
+        {tab === "import" && <ImportPrices onDone={() => setVersion((v) => v + 1)} />}
+      </main>
     </div>
   );
 }
