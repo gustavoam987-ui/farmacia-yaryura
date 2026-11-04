@@ -14,6 +14,7 @@ import TopProducts from "@/components/TopProducts";
 import StockAlerts from "@/components/StockAlerts";
 import Products from "@/components/Products";
 import ImportPrices from "@/components/ImportPrices";
+import RegisterSale from "@/components/RegisterSale";
 
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
@@ -64,6 +65,7 @@ export default function Home() {
         {tab === "alerts" && <StockAlerts products={products} />}
         {tab === "products" && <Products />}
         {tab === "import" && <ImportPrices onDone={() => setVersion((v) => v + 1)} />}
+        {tab === "sale" && <RegisterSale products={products} onSaleCompleted={() => setVersion((v) => v + 1)} />}
       </main>
     </div>
   );
