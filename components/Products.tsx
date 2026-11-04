@@ -32,7 +32,7 @@ export default function Products() {
     if (error) {
       alert("Error al eliminar: " + error.message);
     } else {
-      setProducts(products.filter((p) => p.id !== id));
+      setProducts(products.filter((p) => String(p.id) !== String(id)));
     }
   }
 
@@ -134,7 +134,7 @@ export default function Products() {
               </tr>
             ) : (
               filteredProducts.map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <tr key={String(p.id)} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
                   <td className="px-4 py-3 text-slate-500">{p.barcode || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{(p as any).purchase_price != null ? ars.format((p as any).purchase_price) : "—"}</td>
@@ -152,7 +152,7 @@ export default function Products() {
                         <Pencil size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(p.id, p.name)}
+                        onClick={() => handleDelete(String(p.id), p.name)}
                         className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
                         title="Eliminar"
                       >
@@ -215,41 +215,4 @@ export default function Products() {
                     type="number"
                     step="any"
                     value={editingProduct.sale_price ?? ""}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, sale_price: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-500">Stock actual</label>
-                <input
-                  type="number"
-                  value={editingProduct.stock ?? 0}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setEditingProduct(null)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-                >
-                  Guardar cambios
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, sale_price:
